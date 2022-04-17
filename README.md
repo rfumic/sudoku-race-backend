@@ -1,6 +1,6 @@
 # SudokuRace
 
-Forum za studente
+Multiplayer sudoku
 
 ### Autori i zaduženja
 
