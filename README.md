@@ -1,6 +1,6 @@
 # SudokuRace
 
-Multiplayer sudoku
+Online sudoku
 
 ### Autori i zaduženja
 
@@ -8,7 +8,7 @@ Multiplayer sudoku
 
 ### Frontend repozitorij
 
-Github: https://www.github.com/...
+Github: https://github.com/rfumic/sudoku-race-frontend
 
 ### Javni link na aplikaciju
 
