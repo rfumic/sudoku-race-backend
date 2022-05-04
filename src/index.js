@@ -4,6 +4,7 @@ import express from 'express';
 import cors from 'cors';
 import auth from './auth.js';
 import mongoose from 'mongoose';
+import User from './models/user.js';
 
 const app = express();
 const PORT = process.env.port || 4000;
@@ -39,12 +40,19 @@ app.post('/users', async (req, res) => {
   try {
     id = await auth.registerUser(user);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('/users error:', error.message);
+    res.status(409).json({ error: error.message });
     return;
   }
   res.json({ id: id });
 });
+// TEMPORARY TEMPORARY TEMPORARY
+app.get('/users', async (req, res, next) => {
+  const user = await User.find();
+  res.send(user);
+});
 
 app.listen(PORT, () => {
+  console.log('\x1b[41m START MONGOdb!!! \x1b[0m');
   console.log(`Listening on http://localhost:${PORT}/`);
 });

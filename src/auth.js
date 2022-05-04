@@ -8,13 +8,12 @@ async function registerUser(userData) {
     doc.password = await bcrypt.hash(userData.password, 8);
 
     let result = await User.create(doc);
-    console.log('Ovo je rezult', result);
     if (result && result._id) {
       return result._id;
     }
   } catch (error) {
     if (error.code == 11000) {
-      throw new Error('User already exists');
+      throw new Error('username or email is taken');
     }
   }
 }
