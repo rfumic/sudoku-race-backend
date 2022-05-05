@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 import express from 'express';
 import cors from 'cors';
+import { makepuzzle, solvepuzzle } from 'sudoku';
 import auth from './auth.js';
 import mongoose from 'mongoose';
 import User from './models/user.js';
@@ -29,6 +30,7 @@ app.post('/auth', async (req, res) => {
     let result = await auth.authenticateUser(user.email, user.password);
     res.json(result);
   } catch (error) {
+    console.error(error.message);
     res.status(401).json({ error: error.message });
   }
 });
@@ -45,6 +47,17 @@ app.post('/users', async (req, res) => {
     return;
   }
   res.json({ id: id });
+});
+// endpoint za random sudoku
+app.get('/random', async (req, res, next) => {
+  let puzzle = await makepuzzle();
+  let solution = await solvepuzzle(puzzle);
+  puzzle = puzzle.map((e) => (e == 0 ? 9 : e));
+  solution = solution.map((e) => (e == 0 ? 9 : e));
+  res.send({
+    puzzle,
+    solution,
+  });
 });
 // TEMPORARY TEMPORARY TEMPORARY
 app.get('/users', async (req, res, next) => {
