@@ -33,6 +33,7 @@ async function authenticateUser(email, password) {
     return {
       token,
       email: user.email,
+      username: user.username,
     };
   } else {
     throw new Error('Cannot authenticate');
