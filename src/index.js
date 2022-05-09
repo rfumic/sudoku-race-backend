@@ -2,10 +2,10 @@ import dotenv from 'dotenv';
 dotenv.config();
 import express from 'express';
 import cors from 'cors';
-import { makepuzzle, solvepuzzle } from 'sudoku';
 import auth from './auth.js';
 import mongoose from 'mongoose';
 import User from './models/user.js';
+import createPuzzle from './createpuzzle.js';
 
 const app = express();
 const PORT = process.env.port || 4000;
@@ -50,10 +50,7 @@ app.post('/users', async (req, res) => {
 });
 // endpoint za random sudoku
 app.get('/random', async (req, res, next) => {
-  let puzzle = await makepuzzle();
-  let solution = await solvepuzzle(puzzle);
-  puzzle = puzzle.map((e) => (e == 0 ? 9 : e));
-  solution = solution.map((e) => (e == 0 ? 9 : e));
+  const { puzzle, solution } = await createPuzzle();
   res.send({
     puzzle,
     solution,
@@ -63,6 +60,11 @@ app.get('/random', async (req, res, next) => {
 app.get('/users', async (req, res, next) => {
   const user = await User.find();
   res.send(user);
+});
+// TEMPORARY TEMPORARY TEMPORARY
+// generating ranked puzzles
+app.post('/ranked', async (req, res, next) => {
+  res.json({ message: 'A new ranked puzzle has been generated!' });
 });
 
 app.listen(PORT, () => {
