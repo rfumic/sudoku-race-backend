@@ -5,6 +5,7 @@ import cors from 'cors';
 import auth from './auth.js';
 import mongoose from 'mongoose';
 import User from './models/user.js';
+import Puzzle from './models/puzzle.js';
 import createPuzzle from './createpuzzle.js';
 
 const app = express();
@@ -56,6 +57,26 @@ app.get('/random', async (req, res, next) => {
     solution,
   });
 });
+
+// dohvat svih ranked sudoku
+app.get('/ranked', [auth.verifyJWT], async (req, res, next) => {
+  const query = req.query;
+  let sort = query.sort || '-dateCreated';
+  let limit = query.limit || 10;
+  const puzzles = await Puzzle.find()
+    .limit(limit)
+    .sort(sort)
+    .select('dateCreated timesCompleted likes name difficulty');
+  res.send(puzzles);
+});
+
+// dohvat jedne ranked sudoku
+app.get('/ranked/:id', [auth.verifyJWT], async (req, res, next) => {
+  const id = req.params.id;
+  const response = await Puzzle.findById(id);
+  res.send(response);
+});
+
 // TEMPORARY TEMPORARY TEMPORARY
 app.get('/users', async (req, res, next) => {
   const user = await User.find();
@@ -64,7 +85,11 @@ app.get('/users', async (req, res, next) => {
 // TEMPORARY TEMPORARY TEMPORARY
 // generating ranked puzzles
 app.post('/ranked', async (req, res, next) => {
-  res.json({ message: 'A new ranked puzzle has been generated!' });
+  const puzzleName = req.body.name;
+  const { puzzle, solution } = await createPuzzle();
+  let result = await Puzzle.create({ puzzle, solution, name: puzzleName });
+
+  res.json(result);
 });
 
 app.listen(PORT, () => {
