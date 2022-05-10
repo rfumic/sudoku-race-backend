@@ -34,6 +34,7 @@ async function authenticateUser(email, password) {
       token,
       email: user.email,
       username: user.username,
+      completedPuzzles: user.completedPuzzles,
     };
   } else {
     throw new Error('Cannot authenticate');

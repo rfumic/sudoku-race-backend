@@ -22,6 +22,10 @@ const userSchema = new Schema({
     type: Date,
     default: Date.now,
   },
+  completedPuzzles: {
+    type: Array,
+    default: [],
+  },
 });
 
 const User = mongoose.model('user', userSchema);
