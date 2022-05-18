@@ -73,7 +73,16 @@ app.get('/ranked', [auth.verifyJWT], async (req, res, next) => {
 // dohvat jedne ranked sudoku
 app.get('/ranked/:id', [auth.verifyJWT], async (req, res, next) => {
   const id = req.params.id;
-  const response = await Puzzle.findById(id);
+  const response = await Puzzle.findById(id).select('name puzzle solution');
+  res.send(response);
+});
+
+// dohvat informacija o jednom ranked sudoku
+app.get('/ranked/info/:id', [auth.verifyJWT], async (req, res, next) => {
+  const id = req.params.id;
+  const response = await Puzzle.findById(id).select(
+    'dateCreated timesCompleted likes name difficulty'
+  );
   res.send(response);
 });
 
