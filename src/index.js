@@ -49,6 +49,30 @@ app.post('/users', async (req, res) => {
   }
   res.json({ id: id });
 });
+
+// update user rezultata
+app.patch('/users/results/:email', [auth.verifyJWT], async (req, res) => {
+  const email = req.params.email;
+  const userResult = req.body;
+  console.log('Updating user', email, 'with data', userResult);
+
+  try {
+    await User.findOneAndUpdate(
+      { email: email },
+      {
+        $push: {
+          completedPuzzles: userResult,
+        },
+      }
+    ).exec();
+  } catch (error) {
+    console.error(error);
+  }
+  const response = await User.findOne({ email: email }).exec();
+  console.log('Response:', response);
+  res.send(response);
+});
+
 // endpoint za random sudoku
 app.get('/random', async (req, res, next) => {
   const { puzzle, solution } = await createPuzzle();
