@@ -15,9 +15,9 @@ const puzzleSchema = new Schema({
     type: Array,
     required: true,
   },
-  timesCompleted: {
-    type: Number,
-    default: 0,
+  playerResults: {
+    type: Array,
+    default: [],
   },
   likes: {
     type: Array,

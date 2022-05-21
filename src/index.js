@@ -65,6 +65,14 @@ app.patch('/users/results/:email', [auth.verifyJWT], async (req, res) => {
         },
       }
     ).exec();
+    await Puzzle.findOneAndUpdate(
+      { _id: userResult.id },
+      {
+        $push: {
+          playerResults: { email: email, time: userResult.time },
+        },
+      }
+    );
   } catch (error) {
     console.error(error);
   }
@@ -102,12 +110,32 @@ app.get('/ranked/:id', [auth.verifyJWT], async (req, res, next) => {
 });
 
 // dohvat informacija o jednom ranked sudoku
-app.get('/ranked/info/:id', [auth.verifyJWT], async (req, res, next) => {
+app.get('/ranked/:id/info', [auth.verifyJWT], async (req, res, next) => {
   const id = req.params.id;
   const response = await Puzzle.findById(id).select(
-    'dateCreated timesCompleted likes name difficulty'
+    'dateCreated playerResults likes name difficulty'
   );
   res.send(response);
+});
+
+// lajkanje
+app.post('/ranked/:id/likes', [auth.verifyJWT], async (req, res, next) => {
+  const id = req.params.id;
+  const userEmail = req.body.userEmail;
+
+  try {
+    let { likes } = await Puzzle.findById(id).select('likes');
+
+    if (likes.includes(userEmail)) {
+      likes = likes.filter((e) => e != userEmail);
+    } else {
+      likes.push(userEmail);
+    }
+    await Puzzle.updateOne({ _id: id }, { likes });
+  } catch (error) {
+    console.error(error);
+  }
+  res.json({ message: 'Likes updated' });
 });
 
 // TEMPORARY TEMPORARY TEMPORARY
