@@ -95,11 +95,15 @@ app.get('/ranked', [auth.verifyJWT], async (req, res, next) => {
   const query = req.query;
   let sort = query.sort || '-dateCreated';
   let limit = query.limit || 10;
-  const puzzles = await Puzzle.find()
-    .limit(limit)
-    .sort(sort)
-    .select('dateCreated timesCompleted likes name difficulty');
-  res.send(puzzles);
+  try {
+    const puzzles = await Puzzle.find()
+      .limit(limit)
+      .sort(sort)
+      .select('dateCreated playerResults likes name difficulty');
+    res.send(puzzles);
+  } catch (error) {
+    console.error(error);
+  }
 });
 
 // dohvat jedne ranked sudoku
