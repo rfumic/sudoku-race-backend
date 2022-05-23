@@ -26,6 +26,10 @@ const userSchema = new Schema({
     type: Array,
     default: [],
   },
+  totalPoints: {
+    type: Number,
+    default: 0,
+  },
 });
 
 const User = mongoose.model('user', userSchema);

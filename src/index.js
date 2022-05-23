@@ -63,13 +63,20 @@ app.patch('/users/results/:email', [auth.verifyJWT], async (req, res) => {
         $push: {
           completedPuzzles: userResult,
         },
+        $inc: {
+          totalPoints: userResult.points,
+        },
       }
     ).exec();
     await Puzzle.findOneAndUpdate(
       { _id: userResult.id },
       {
         $push: {
-          playerResults: { email: email, time: userResult.time },
+          playerResults: {
+            email: email,
+            time: userResult.time,
+            points: userResult.points,
+          },
         },
       }
     );
