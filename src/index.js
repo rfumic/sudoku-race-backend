@@ -7,6 +7,7 @@ import mongoose from 'mongoose';
 import User from './models/user.js';
 import Puzzle from './models/puzzle.js';
 import createPuzzle from './createpuzzle.js';
+import { type } from 'express/lib/response';
 
 const app = express();
 const PORT = process.env.port || 4000;
@@ -50,6 +51,24 @@ app.post('/users', async (req, res) => {
   res.json({ id: id });
 });
 
+// dohvat leaderboarda
+app.get('/users', async (req, res, next) => {
+  const query = req.query;
+  let sort = query.sort || '-totalPoints';
+  let limit = query.limit || 20;
+
+  try {
+    const users = await User.find()
+      .lean()
+      .limit(limit)
+      .sort(sort)
+      .select('username totalPoints numberOfCompleted');
+    res.send(users);
+  } catch (error) {
+    console.error(error);
+  }
+});
+
 // update user rezultata
 app.patch('/users/results/:email', [auth.verifyJWT], async (req, res) => {
   const email = req.params.email;
@@ -65,6 +84,7 @@ app.patch('/users/results/:email', [auth.verifyJWT], async (req, res) => {
         },
         $inc: {
           totalPoints: userResult.points,
+          numberOfCompleted: 1,
         },
       }
     ).exec();
@@ -149,11 +169,6 @@ app.post('/ranked/:id/likes', [auth.verifyJWT], async (req, res, next) => {
   res.json({ message: 'Likes updated' });
 });
 
-// TEMPORARY TEMPORARY TEMPORARY
-app.get('/users', async (req, res, next) => {
-  const user = await User.find();
-  res.send(user);
-});
 // TEMPORARY TEMPORARY TEMPORARY
 // generating ranked puzzles
 app.post('/ranked', async (req, res, next) => {

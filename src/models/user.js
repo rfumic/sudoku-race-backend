@@ -26,6 +26,11 @@ const userSchema = new Schema({
     type: Array,
     default: [],
   },
+  numberOfCompleted: {
+    type: Number,
+    default: 0,
+    required: true,
+  },
   totalPoints: {
     type: Number,
     default: 0,
