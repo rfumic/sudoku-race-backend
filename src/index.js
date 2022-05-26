@@ -7,7 +7,6 @@ import mongoose from 'mongoose';
 import User from './models/user.js';
 import Puzzle from './models/puzzle.js';
 import createPuzzle from './createpuzzle.js';
-import { type } from 'express/lib/response';
 
 const app = express();
 const PORT = process.env.port || 4000;
@@ -64,6 +63,19 @@ app.get('/users', async (req, res, next) => {
       .sort(sort)
       .select('username totalPoints numberOfCompleted');
     res.send(users);
+  } catch (error) {
+    console.error(error);
+  }
+});
+
+// dohvat jednog usera
+app.get('/users/:username', async (req, res, next) => {
+  const username = req.params.username;
+  try {
+    const response = await User.findOne({ username }).select(
+      '_id username dateJoined completedPuzzles totalPoints'
+    );
+    res.send(response);
   } catch (error) {
     console.error(error);
   }
