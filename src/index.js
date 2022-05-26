@@ -70,9 +70,14 @@ app.get('/users', async (req, res, next) => {
 app.get('/users/:username', async (req, res, next) => {
   const { username } = req.params;
   try {
-    const response = await User.findOne({ username }).select(
+    let response = await User.findOne({ username }).select(
       '_id username dateJoined completedPuzzles totalPoints'
     );
+    if (!response) {
+      response = await User.findOne({ email: username }).select(
+        '_id username dateJoined completedPuzzles totalPoints'
+      );
+    }
     res.send(response);
   } catch (error) {
     console.error(error);
