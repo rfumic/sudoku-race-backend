@@ -52,9 +52,7 @@ app.post('/users', async (req, res) => {
 
 // dohvat leaderboarda
 app.get('/users', async (req, res, next) => {
-  const query = req.query;
-  let sort = query.sort || '-totalPoints';
-  let limit = query.limit || 20;
+  const { sort = '-totalPoints', limit = 20 } = req.query;
 
   try {
     const users = await User.find()
@@ -70,7 +68,7 @@ app.get('/users', async (req, res, next) => {
 
 // dohvat jednog usera
 app.get('/users/:username', async (req, res, next) => {
-  const username = req.params.username;
+  const { username } = req.params;
   try {
     const response = await User.findOne({ username }).select(
       '_id username dateJoined completedPuzzles totalPoints'
@@ -83,7 +81,7 @@ app.get('/users/:username', async (req, res, next) => {
 
 // update user rezultata
 app.patch('/users/results/:email', [auth.verifyJWT], async (req, res) => {
-  const email = req.params.email;
+  const { email } = req.params;
   const userResult = req.body;
   console.log('Updating user', email, 'with data', userResult);
 
@@ -131,15 +129,27 @@ app.get('/random', async (req, res, next) => {
 
 // dohvat svih ranked sudoku
 app.get('/ranked', [auth.verifyJWT], async (req, res, next) => {
-  const query = req.query;
-  let sort = query.sort || '-dateCreated';
-  let limit = query.limit || 10;
+  let { sort = '-dateCreated', limit, skip } = req.query;
+  limit = parseInt(limit) || 10;
+  skip = parseInt(skip) || 0;
   try {
-    const puzzles = await Puzzle.find()
-      .limit(limit)
-      .sort(sort)
-      .select('dateCreated playerResults likes name difficulty');
-    res.send(puzzles);
+    const [total, puzzles] = await Promise.all([
+      await Puzzle.find().estimatedDocumentCount(),
+      await Puzzle.find()
+        .skip(skip)
+        .limit(limit)
+        .sort(sort)
+        .select('dateCreated playerResults likes name difficulty'),
+    ]);
+    res.send({
+      total,
+      puzzles,
+      meta: {
+        skip,
+        limit,
+        hasMoreData: total - (skip + limit) > 0,
+      },
+    });
   } catch (error) {
     console.error(error);
   }
@@ -147,14 +157,14 @@ app.get('/ranked', [auth.verifyJWT], async (req, res, next) => {
 
 // dohvat jedne ranked sudoku
 app.get('/ranked/:id', [auth.verifyJWT], async (req, res, next) => {
-  const id = req.params.id;
+  const { id } = req.params;
   const response = await Puzzle.findById(id).select('name puzzle solution');
   res.send(response);
 });
 
 // dohvat informacija o jednom ranked sudoku
 app.get('/ranked/:id/info', [auth.verifyJWT], async (req, res, next) => {
-  const id = req.params.id;
+  const { id } = req.params;
   const response = await Puzzle.findById(id).select(
     'dateCreated playerResults likes name difficulty'
   );
@@ -163,7 +173,7 @@ app.get('/ranked/:id/info', [auth.verifyJWT], async (req, res, next) => {
 
 // lajkanje
 app.post('/ranked/:id/likes', [auth.verifyJWT], async (req, res, next) => {
-  const id = req.params.id;
+  const { id } = req.params;
   const userEmail = req.body.userEmail;
 
   try {
