@@ -59,8 +59,27 @@ async function verifyJWT(req, res, next) {
   }
 }
 
+async function changeUserPassword(username, old_password, new_password) {
+  let user = await User.findOne({ username }).exec();
+
+  if (
+    user &&
+    user.password &&
+    (await bcrypt.compare(old_password, user.password))
+  ) {
+    let new_password_hashed = await bcrypt.hash(new_password, 8);
+
+    let result = await User.updateOne(
+      { _id: user._id },
+      { password: new_password_hashed }
+    );
+    return result.modifiedCount == 1;
+  }
+}
+
 export default {
   registerUser,
   authenticateUser,
   verifyJWT,
+  changeUserPassword,
 };

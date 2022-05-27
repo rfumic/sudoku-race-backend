@@ -18,11 +18,6 @@ mongoose.Promise = global.Promise;
 app.use(cors());
 app.use(express.json());
 
-// autorizacija; [auth.verifyJWT] ide tamo gdje treba bit autorizacija
-app.get('/tajna', [auth.verifyJWT], (req, res) => {
-  res.json({ message: 'ovo je tajna' + req.jwt.email });
-});
-
 // autentifikacija/login
 app.post('/auth', async (req, res) => {
   let user = req.body;
@@ -81,6 +76,50 @@ app.get('/users/:username', async (req, res, next) => {
     res.send(response);
   } catch (error) {
     console.error(error);
+  }
+});
+
+// update korisnickog racuna
+app.patch('/users', [auth.verifyJWT], async (req, res) => {
+  const request = req.body;
+  const username = req.jwt.username;
+  const email = req.jwt.email;
+
+  let result;
+
+  if (request.new_password && request.old_password) {
+    result = await auth.changeUserPassword(
+      username,
+      request.old_password,
+      request.new_password
+    );
+    if (result) {
+      res.status(201).send();
+    } else {
+      res.status(500).json({ error: 'cannot chage password' });
+    }
+  } else if (request.new_username) {
+    result = await User.findOneAndUpdate(
+      { username },
+      { username: request.new_username }
+    );
+    if (result) {
+      res.status(201).send();
+    } else {
+      res.status(500).json({ error: 'cannot chage username' });
+    }
+  } else if (request.new_email) {
+    result = await User.findOneAndUpdate(
+      { email },
+      { email: request.new_email }
+    );
+    if (result) {
+      res.status(201).send();
+    } else {
+      res.status(500).json({ error: 'cannot chage username' });
+    }
+  } else {
+    res.status(400).json({ error: 'wrong request' });
   }
 });
 
