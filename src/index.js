@@ -2,21 +2,34 @@ import dotenv from 'dotenv';
 dotenv.config();
 import express from 'express';
 import cors from 'cors';
-import auth from './auth.js';
 import mongoose from 'mongoose';
+import { generateSlug } from 'random-word-slugs';
+import auth from './auth.js';
 import User from './models/user.js';
 import Puzzle from './models/puzzle.js';
 import createPuzzle from './createpuzzle.js';
 
 const app = express();
 const PORT = process.env.port || 4000;
-
+let requestCount = 0;
 //  mongodb spajanje
 mongoose.connect('mongodb://localhost/sudoku-race');
 mongoose.Promise = global.Promise;
 
 app.use(cors());
 app.use(express.json());
+
+async function generatePuzzle() {
+  console.log(requestCount);
+  if (requestCount > 2) {
+    const puzzleName = generateSlug();
+    const { puzzle, solution } = await createPuzzle();
+    await Puzzle.create({ puzzle, solution, name: puzzleName });
+    requestCount = 0;
+  } else {
+    requestCount += 1;
+  }
+}
 
 // autentifikacija/login
 app.post('/auth', async (req, res) => {
@@ -47,17 +60,31 @@ app.post('/users', async (req, res) => {
 
 // dohvat leaderboarda
 app.get('/users', async (req, res, next) => {
-  const { sort = '-totalPoints', limit = 20 } = req.query;
+  let { sort = '-totalPoints', limit, skip } = req.query;
+  limit = parseInt(limit) || 20;
+  skip = parseInt(skip) || 0;
 
   try {
-    const users = await User.find()
-      .lean()
-      .limit(limit)
-      .sort(sort)
-      .select('username totalPoints numberOfCompleted');
-    res.send(users);
+    const [total, users] = await Promise.all([
+      await User.find().estimatedDocumentCount(),
+      await User.find()
+        .lean()
+        .skip(skip)
+        .limit(limit)
+        .sort(sort)
+        .select('username totalPoints numberOfCompleted'),
+    ]);
+    res.status(201).send({
+      total,
+      users,
+      meta: {
+        skip,
+        limit,
+        hasMoreData: total - (skip + limit) > 0,
+      },
+    });
   } catch (error) {
-    console.error(error);
+    res.status(500).json({ error: 'server error' });
   }
 });
 
@@ -85,10 +112,8 @@ app.patch('/users', [auth.verifyJWT], async (req, res) => {
   const username = req.jwt.username;
   const email = req.jwt.email;
 
-  let result;
-
   if (request.new_password && request.old_password) {
-    result = await auth.changeUserPassword(
+    const result = await auth.changeUserPassword(
       username,
       request.old_password,
       request.new_password
@@ -99,23 +124,20 @@ app.patch('/users', [auth.verifyJWT], async (req, res) => {
       res.status(500).json({ error: 'cannot chage password' });
     }
   } else if (request.new_username) {
-    result = await User.findOneAndUpdate(
-      { username },
-      { username: request.new_username }
-    );
-    if (result) {
+    try {
+      await User.findOneAndUpdate(
+        { username },
+        { username: request.new_username }
+      );
       res.status(201).send();
-    } else {
+    } catch (error) {
       res.status(500).json({ error: 'cannot chage username' });
     }
   } else if (request.new_email) {
-    result = await User.findOneAndUpdate(
-      { email },
-      { email: request.new_email }
-    );
-    if (result) {
+    try {
+      await User.findOneAndUpdate({ email }, { email: request.new_email });
       res.status(201).send();
-    } else {
+    } catch (error) {
       res.status(500).json({ error: 'cannot chage username' });
     }
   } else {
@@ -126,40 +148,46 @@ app.patch('/users', [auth.verifyJWT], async (req, res) => {
 // update user rezultata
 app.patch('/users/results/:email', [auth.verifyJWT], async (req, res) => {
   const { email } = req.params;
-  const userResult = req.body;
-  console.log('Updating user', email, 'with data', userResult);
 
-  try {
-    await User.findOneAndUpdate(
-      { email: email },
-      {
-        $push: {
-          completedPuzzles: userResult,
-        },
-        $inc: {
-          totalPoints: userResult.points,
-          numberOfCompleted: 1,
-        },
-      }
-    ).exec();
-    await Puzzle.findOneAndUpdate(
-      { _id: userResult.id },
-      {
-        $push: {
-          playerResults: {
-            email: email,
-            time: userResult.time,
-            points: userResult.points,
-          },
-        },
-      }
-    );
-  } catch (error) {
-    console.error(error);
+  const userResult = req.body;
+
+  if (req.jwt.email != email) {
+    res.status(401).json({ error: 'unauthorized request' });
+    return;
   }
-  const response = await User.findOne({ email: email }).exec();
-  console.log('Response:', response);
-  res.send(response);
+  try {
+    const [a, b, response, c] = await Promise.all([
+      await User.findOneAndUpdate(
+        { email: email },
+        {
+          $push: {
+            completedPuzzles: userResult,
+          },
+          $inc: {
+            totalPoints: userResult.points,
+            numberOfCompleted: 1,
+          },
+        }
+      ).exec(),
+      await Puzzle.findOneAndUpdate(
+        { _id: userResult.id },
+        {
+          $push: {
+            playerResults: {
+              email: email,
+              time: userResult.time,
+              points: userResult.points,
+            },
+          },
+        }
+      ),
+      await User.findOne({ email: email }).exec(),
+      await generatePuzzle(),
+    ]);
+    res.send(response);
+  } catch (error) {
+    res.status(500).json({ error: 'server error' });
+  }
 });
 
 // endpoint za random sudoku
@@ -183,9 +211,11 @@ app.get('/ranked', [auth.verifyJWT], async (req, res, next) => {
         .skip(skip)
         .limit(limit)
         .sort(sort)
-        .select('dateCreated playerResults likes name difficulty'),
+        .select(
+          'dateCreated playerResults likes name difficulty numberOfLikes'
+        ),
     ]);
-    res.send({
+    res.status(201).send({
       total,
       puzzles,
       meta: {
@@ -195,7 +225,7 @@ app.get('/ranked', [auth.verifyJWT], async (req, res, next) => {
       },
     });
   } catch (error) {
-    console.error(error);
+    res.status(500).json({ error: 'server error' });
   }
 });
 
@@ -218,17 +248,30 @@ app.get('/ranked/:id/info', [auth.verifyJWT], async (req, res, next) => {
 // lajkanje
 app.post('/ranked/:id/likes', [auth.verifyJWT], async (req, res, next) => {
   const { id } = req.params;
-  const userEmail = req.body.userEmail;
+  const email = req.body.userEmail;
+
+  if (req.jwt.email != email) {
+    res.status(401).json({ error: 'unauthorized request' });
+    return;
+  }
 
   try {
     let { likes } = await Puzzle.findById(id).select('likes');
 
-    if (likes.includes(userEmail)) {
-      likes = likes.filter((e) => e != userEmail);
+    if (likes.includes(email)) {
+      likes = likes.filter((e) => e != email);
     } else {
-      likes.push(userEmail);
+      likes.push(email);
     }
-    await Puzzle.updateOne({ _id: id }, { likes });
+    await Puzzle.updateOne(
+      { _id: id },
+      {
+        likes,
+        $inc: {
+          numberOfLikes: 1,
+        },
+      }
+    );
   } catch (error) {
     console.error(error);
   }

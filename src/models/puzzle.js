@@ -31,6 +31,10 @@ const puzzleSchema = new Schema({
     type: String,
     default: 'untitled puzzle',
   },
+  numberOfLikes: {
+    type: Number,
+    default: 0,
+  },
 });
 const Puzzle = mongoose.model('puzzle', puzzleSchema);
 export default Puzzle;
