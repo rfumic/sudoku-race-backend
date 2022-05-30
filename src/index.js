@@ -10,7 +10,7 @@ import Puzzle from './models/puzzle.js';
 import createPuzzle from './createpuzzle.js';
 
 const app = express();
-const PORT = process.env.port || 4000;
+const PORT = process.env.PORT || 4000;
 let requestCount = 0;
 //  mongodb spajanje
 mongoose.connect(process.env.MONGO_URI);
