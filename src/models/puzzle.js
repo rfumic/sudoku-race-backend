@@ -23,10 +23,6 @@ const puzzleSchema = new Schema({
     type: Array,
     default: [],
   },
-  difficulty: {
-    type: Number,
-    default: 3,
-  },
   name: {
     type: String,
     default: 'untitled puzzle',

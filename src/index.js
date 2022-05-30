@@ -13,14 +13,13 @@ const app = express();
 const PORT = process.env.port || 4000;
 let requestCount = 0;
 //  mongodb spajanje
-mongoose.connect('mongodb://localhost/sudoku-race');
+mongoose.connect(process.env.MONGO_URI);
 mongoose.Promise = global.Promise;
 
 app.use(cors());
 app.use(express.json());
 
 async function generatePuzzle() {
-  console.log(requestCount);
   if (requestCount > 2) {
     const puzzleName = generateSlug();
     const { puzzle, solution } = await createPuzzle();
@@ -39,7 +38,6 @@ app.post('/auth', async (req, res) => {
     let result = await auth.authenticateUser(user.email, user.password);
     res.json(result);
   } catch (error) {
-    console.error(error.message);
     res.status(401).json({ error: error.message });
   }
 });
@@ -51,15 +49,13 @@ app.post('/users', async (req, res) => {
   try {
     id = await auth.registerUser(user);
   } catch (error) {
-    console.error('/users error:', error.message);
-    res.status(409).json({ error: error.message });
-    return;
+    return res.status(409).json({ error: error });
   }
   res.json({ id: id });
 });
 
 // dohvat leaderboarda
-app.get('/users', async (req, res, next) => {
+app.get('/users', async (req, res) => {
   let { sort = '-totalPoints', limit, skip } = req.query;
   limit = parseInt(limit) || 20;
   skip = parseInt(skip) || 0;
@@ -74,7 +70,7 @@ app.get('/users', async (req, res, next) => {
         .sort(sort)
         .select('username totalPoints numberOfCompleted'),
     ]);
-    res.status(201).send({
+    return res.status(201).send({
       total,
       users,
       meta: {
@@ -84,12 +80,12 @@ app.get('/users', async (req, res, next) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ error: 'server error' });
+    return res.status(500).json({ error: 'server error' });
   }
 });
 
 // dohvat jednog usera
-app.get('/users/:username', async (req, res, next) => {
+app.get('/users/:username', async (req, res) => {
   const { username } = req.params;
   try {
     let response = await User.findOne({ username }).select(
@@ -100,9 +96,9 @@ app.get('/users/:username', async (req, res, next) => {
         '_id username dateJoined completedPuzzles totalPoints'
       );
     }
-    res.send(response);
+    return res.send(response);
   } catch (error) {
-    console.error(error);
+    return res.status(500).json({ error: 'server error' });
   }
 });
 
@@ -129,19 +125,19 @@ app.patch('/users', [auth.verifyJWT], async (req, res) => {
         { username },
         { username: request.new_username }
       );
-      res.status(201).send();
+      return res.status(201).send();
     } catch (error) {
-      res.status(500).json({ error: 'cannot chage username' });
+      return res.status(500).json({ error: 'cannot chage username' });
     }
   } else if (request.new_email) {
     try {
       await User.findOneAndUpdate({ email }, { email: request.new_email });
-      res.status(201).send();
+      return res.status(201).send();
     } catch (error) {
-      res.status(500).json({ error: 'cannot chage username' });
+      return res.status(500).json({ error: 'cannot chage username' });
     }
   } else {
-    res.status(400).json({ error: 'wrong request' });
+    return res.status(400).json({ error: 'wrong request' });
   }
 });
 
@@ -152,8 +148,7 @@ app.patch('/users/results/:email', [auth.verifyJWT], async (req, res) => {
   const userResult = req.body;
 
   if (req.jwt.email != email) {
-    res.status(401).json({ error: 'unauthorized request' });
-    return;
+    return res.status(401).json({ error: 'unauthorized request' });
   }
   try {
     const [a, b, response, c] = await Promise.all([
@@ -184,23 +179,23 @@ app.patch('/users/results/:email', [auth.verifyJWT], async (req, res) => {
       await User.findOne({ email: email }).exec(),
       await generatePuzzle(),
     ]);
-    res.send(response);
+    return res.send(response);
   } catch (error) {
-    res.status(500).json({ error: 'server error' });
+    return res.status(500).json({ error: 'server error' });
   }
 });
 
 // endpoint za random sudoku
-app.get('/random', async (req, res, next) => {
+app.get('/random', async (req, res) => {
   const { puzzle, solution } = await createPuzzle();
-  res.send({
+  return res.send({
     puzzle,
     solution,
   });
 });
 
 // dohvat svih ranked sudoku
-app.get('/ranked', [auth.verifyJWT], async (req, res, next) => {
+app.get('/ranked', [auth.verifyJWT], async (req, res) => {
   let { sort = '-dateCreated', limit, skip } = req.query;
   limit = parseInt(limit) || 10;
   skip = parseInt(skip) || 0;
@@ -211,11 +206,9 @@ app.get('/ranked', [auth.verifyJWT], async (req, res, next) => {
         .skip(skip)
         .limit(limit)
         .sort(sort)
-        .select(
-          'dateCreated playerResults likes name difficulty numberOfLikes'
-        ),
+        .select('dateCreated playerResults likes name  numberOfLikes'),
     ]);
-    res.status(201).send({
+    return res.status(201).send({
       total,
       puzzles,
       meta: {
@@ -225,34 +218,37 @@ app.get('/ranked', [auth.verifyJWT], async (req, res, next) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ error: 'server error' });
+    return res.status(500).json({ error: 'server error' });
   }
 });
 
 // dohvat jedne ranked sudoku
-app.get('/ranked/:id', [auth.verifyJWT], async (req, res, next) => {
+app.get('/ranked/:id', [auth.verifyJWT], async (req, res) => {
   const { id } = req.params;
-  const response = await Puzzle.findById(id).select('name puzzle solution');
-  res.send(response);
+  try {
+    const response = await Puzzle.findById(id).select('name puzzle solution');
+    return res.send(response);
+  } catch (error) {
+    return res.status(500).json({ error: 'server error' });
+  }
 });
 
 // dohvat informacija o jednom ranked sudoku
-app.get('/ranked/:id/info', [auth.verifyJWT], async (req, res, next) => {
+app.get('/ranked/:id/info', [auth.verifyJWT], async (req, res) => {
   const { id } = req.params;
   const response = await Puzzle.findById(id).select(
-    'dateCreated playerResults likes name difficulty'
+    'dateCreated playerResults likes name'
   );
-  res.send(response);
+  return res.send(response);
 });
 
 // lajkanje
-app.post('/ranked/:id/likes', [auth.verifyJWT], async (req, res, next) => {
+app.post('/ranked/:id/likes', [auth.verifyJWT], async (req, res) => {
   const { id } = req.params;
   const email = req.body.userEmail;
 
   if (req.jwt.email != email) {
-    res.status(401).json({ error: 'unauthorized request' });
-    return;
+    return res.status(401).json({ error: 'unauthorized request' });
   }
 
   try {
@@ -273,22 +269,20 @@ app.post('/ranked/:id/likes', [auth.verifyJWT], async (req, res, next) => {
       }
     );
   } catch (error) {
-    console.error(error);
+    return res.status(500).json({ error: 'server error' });
   }
-  res.json({ message: 'Likes updated' });
+  return res.json({ message: 'Likes updated' });
 });
 
-// TEMPORARY TEMPORARY TEMPORARY
 // generating ranked puzzles
-app.post('/ranked', async (req, res, next) => {
+app.post('/ranked', async (req, res) => {
   const puzzleName = req.body.name;
   const { puzzle, solution } = await createPuzzle();
   let result = await Puzzle.create({ puzzle, solution, name: puzzleName });
 
-  res.json(result);
+  return res.json(result);
 });
 
 app.listen(PORT, () => {
-  console.log('\x1b[41m START MONGOdb!!! \x1b[0m');
-  console.log(`Listening on http://localhost:${PORT}/`);
+  console.log(`Listening on port: ${PORT}`);
 });
