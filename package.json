@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "type": "module",
   "scripts": {
     "serve": "nodemon --exec babel-node src/index.js",
-    "start": "node src/index.js",
+    "build": "babel src -d build",
+    "start": "node build/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
@@ -22,9 +22,13 @@
     "sudoku": "^0.0.3"
   },
   "devDependencies": {
-    "@babel/core": "^7.17.9",
+    "@babel/cli": "^7.17.10",
+    "@babel/core": "^7.18.2",
     "@babel/node": "^7.16.8",
+    "@babel/plugin-transform-runtime": "^7.18.2",
     "@babel/preset-env": "^7.16.11",
+    "@babel/runtime": "^7.18.3",
+    "babel-core": "^7.0.0-bridge.0",
     "nodemon": "^2.0.15"
   }
 }
