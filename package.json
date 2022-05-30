@@ -22,10 +22,10 @@
     "jsonwebtoken": "^8.5.1",
     "mongoose": "^6.3.2",
     "random-word-slugs": "^0.1.6",
-    "sudoku": "^0.0.3"
+    "sudoku": "^0.0.3",
+    "@babel/runtime": "^7.18.3"
   },
   "devDependencies": {
-    "@babel/runtime": "^7.18.3",
     "@babel/cli": "^7.17.10",
     "@babel/core": "^7.18.2",
     "@babel/node": "^7.17.10",
