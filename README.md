@@ -8,11 +8,17 @@ Online sudoku
 
 ### Frontend repozitorij
 
-Github: https://github.com/rfumic/sudoku-race-frontend
+[Github](https://www.github.com/rfumic/sudoku-race-frontend)
 
 ### Javni link na aplikaciju
 
-Web: ...
+[sudoku-race](https://sudoku-race.surge.sh)
+
+### API URL
+
+```
+https://gentle-mountain-95216.herokuapp.com/
+```
 
 ### Organizacija
 
