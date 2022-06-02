@@ -253,18 +253,20 @@ app.post('/ranked/:id/likes', [auth.verifyJWT], async (req, res) => {
 
   try {
     let { likes } = await Puzzle.findById(id).select('likes');
-
+    let like = 0;
     if (likes.includes(email)) {
       likes = likes.filter((e) => e != email);
+      like = -1;
     } else {
       likes.push(email);
+      like = 1;
     }
     await Puzzle.updateOne(
       { _id: id },
       {
         likes,
         $inc: {
-          numberOfLikes: 1,
+          numberOfLikes: like,
         },
       }
     );
